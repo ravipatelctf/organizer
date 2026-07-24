@@ -9102,6 +9102,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "organizer@workspace:."
   dependencies:
+    "@repo/eslint-config": "workspace:*"
     eslint: "npm:^9.17.0"
     husky: "npm:^9.1.7"
     lint-staged: "npm:^15.2.10"

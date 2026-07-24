@@ -3191,6 +3191,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@repo/permissions@workspace:packages/permissions":
+  version: 0.0.0-use.local
+  resolution: "@repo/permissions@workspace:packages/permissions"
+  dependencies:
+    "@repo/eslint-config": "workspace:*"
+    "@repo/typescript-config": "workspace:*"
+    "@types/jest": "npm:^29.5.14"
+    eslint: "npm:^9.17.0"
+    jest: "npm:^29.7.0"
+    ts-jest: "npm:^29.2.5"
+    typescript: "npm:^5.7.2"
+  languageName: unknown
+  linkType: soft
+
 "@repo/typescript-config@workspace:*, @repo/typescript-config@workspace:packages/typescript-config":
   version: 0.0.0-use.local
   resolution: "@repo/typescript-config@workspace:packages/typescript-config"
@@ -9104,6 +9118,7 @@ __metadata:
   dependencies:
     "@repo/eslint-config": "workspace:*"
     eslint: "npm:^9.17.0"
+    globals: "npm:^15.14.0"
     husky: "npm:^9.1.7"
     lint-staged: "npm:^15.2.10"
     prettier: "npm:^3.3.3"

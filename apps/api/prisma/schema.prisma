@@ -1,0 +1,134 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── PLATFORM ────────────────────────────────────────────────
+model User {
+  id                     String    @id @default(uuid()) @db.Uuid
+  email                  String    @unique @db.VarChar(255)
+  passwordHash           String    @map("password_hash") @db.VarChar(255)
+  firstName              String    @map("first_name") @db.VarChar(100)
+  lastName               String    @map("last_name") @db.VarChar(100)
+  avatarUrl              String?   @map("avatar_url") @db.VarChar(500)
+  isSuperAdmin           Boolean   @default(false) @map("is_super_admin")
+  resetPasswordTokenHash String?   @unique @map("reset_password_token_hash") @db.VarChar(255)
+  resetPasswordExpiresAt DateTime? @map("reset_password_expires_at") @db.Timestamp(6)
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt              DateTime? @map("deleted_at") @db.Timestamp(6)
+
+  memberships OrgMembership[] @relation("UserMemberships")
+  sessions    Session[]
+  // audit back-relations added as their models arrive: invitedMemberships,
+  // createdProjects, updatedProjects, createdTasks, updatedTasks, assignedRoles
+
+  @@map("users")
+}
+
+// ── TENANT ──────────────────────────────────────────────────
+model Organization {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @db.VarChar(255)
+  slug        String    @unique @db.VarChar(63) // the /orgs/:slug segment
+  settings    Json      @default("{}") @db.JsonB
+  createdById String?   @map("created_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamp(6)
+
+  memberships OrgMembership[]
+  roles       Role[]
+  sessions    Session[]
+  // projects, projectMembers, tasks, auditLogs added in phases 6–8
+
+  @@map("organizations")
+}
+
+model OrgMembership {
+  id                  String    @id @default(uuid()) @db.Uuid
+  organizationId      String    @map("organization_id") @db.Uuid
+  userId              String    @map("user_id") @db.Uuid
+  status              String    @default("INVITED") @db.VarChar(20) // INVITED|ACTIVE|SUSPENDED|REMOVED
+  joinedAt            DateTime? @map("joined_at") @db.Timestamp(6)
+  lastActiveAt        DateTime? @map("last_active_at") @db.Timestamp(6)
+  invitedById         String?   @map("invited_by") @db.Uuid
+  invitationTokenHash String?   @unique @map("invitation_token_hash") @db.VarChar(255)
+  invitationExpiresAt DateTime? @map("invitation_expires_at") @db.Timestamp(6)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt           DateTime? @map("deleted_at") @db.Timestamp(6)
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User             @relation("UserMemberships", fields: [userId], references: [id], onDelete: Cascade)
+  roles        MembershipRole[]
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@map("org_memberships")
+}
+
+// ── RBAC (per-org, seeded from the permission registry) ─────
+model Role {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  name           String    @db.VarChar(100)
+  description    String?   @db.Text
+  rank           Int // 1 = highest privilege
+  isOrgAdmin     Boolean   @default(false) @map("is_org_admin") // ← access level 2
+  isSystemRole   Boolean   @default(false) @map("is_system_role") // seeded, undeletable
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamp(6)
+
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  permissions     RolePermission[]
+  membershipRoles MembershipRole[]
+
+  @@unique([organizationId, name])
+  @@map("roles")
+}
+
+model RolePermission {
+  roleId       String   @map("role_id") @db.Uuid
+  permissionId String   @map("permission_id") @db.VarChar(100) // e.g. "view-own-projects"
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model MembershipRole {
+  id              String   @id @default(uuid()) @db.Uuid
+  orgMembershipId String   @map("org_membership_id") @db.Uuid
+  roleId          String   @map("role_id") @db.Uuid
+  assignedById    String?  @map("assigned_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  membership OrgMembership @relation(fields: [orgMembershipId], references: [id], onDelete: Cascade)
+  role       Role          @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([orgMembershipId, roleId])
+  @@map("membership_roles")
+}
+
+// ── SESSIONS & AUDIT ────────────────────────────────────────
+model Session {
+  id             String   @id @default(uuid()) @db.Uuid
+  token          String   @unique @db.VarChar(255) // opaque refresh token
+  userId         String   @map("user_id") @db.Uuid
+  organizationId String?  @map("organization_id") @db.Uuid // null = account-level session
+  expiresAt      DateTime @map("expires_at") @db.Timestamp(6)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("sessions")
+}

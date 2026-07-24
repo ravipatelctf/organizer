@@ -45,9 +45,15 @@ Run from the repo root unless noted.
 | `yarn lint`        | Lints every workspace                                                      |
 | `yarn check-types` | Type-checks every workspace                                                |
 | `yarn format`      | Formats the repo with Prettier                                             |
+| `yarn test`        | Runs unit tests across every workspace                                     |
 
-Database and test commands are documented in `.claude/commands/db.md`, added in Phase 2 once
-Prisma is wired up.
+Database and migration commands are documented in `.claude/commands/db.md`. Two additional
+per-workspace commands, run from `apps/api`:
+
+| Command                         | Does                                                         |
+| ------------------------------- | ------------------------------------------------------------ |
+| `yarn workspace api test:e2e`   | Runs the e2e suite against the Neon `test` schema (real DB)  |
+| `yarn workspace api prisma ...` | Any Prisma CLI command, config-driven via `prisma.config.ts` |
 
 ## Module conventions (API)
 

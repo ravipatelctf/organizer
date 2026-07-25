@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 
 import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -9,10 +9,11 @@ import * as bcrypt from 'bcrypt';
 import { JwtPayload } from '../common/types/jwt-payload.type';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
-import { LoginDto, RegisterDto } from './dto';
+import { ForgotPasswordDto, LoginDto, RegisterDto, ResetPasswordDto } from './dto';
 
 const ACCESS_TOKEN_TTL = '15m';
 const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 export interface AuthTokens {
   accessToken: string;
@@ -106,6 +107,38 @@ export class AuthService {
     await this.prisma.session.deleteMany({ where: { token: rawToken } });
   }
 
+  async forgotPassword(dto: ForgotPasswordDto): Promise<void> {
+    const user = await this.usersService.findByEmail(dto.email);
+    // Always behave the same whether or not the account exists — the response must not
+    // leak which emails are registered.
+    if (!user) return;
+
+    const rawToken = randomBytes(32).toString('hex');
+    const tokenHash = this.hashOpaqueToken(rawToken);
+    const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+
+    await this.usersService.setResetToken(user.id, tokenHash, expiresAt);
+
+    // SMTP is optional for this build — log the link so it's usable in development.
+    console.log(`Password reset link for ${user.email}: /reset-password?token=${rawToken}`);
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<void> {
+    const tokenHash = this.hashOpaqueToken(dto.token);
+    const user = await this.usersService.findByResetTokenHash(tokenHash);
+
+    if (
+      !user ||
+      !user.resetPasswordExpiresAt ||
+      user.resetPasswordExpiresAt.getTime() <= Date.now()
+    ) {
+      throw new UnauthorizedException('Reset token is invalid or has expired.');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.newPassword, 10);
+    await this.usersService.updatePassword(user.id, passwordHash);
+  }
+
   private async issueTokens(user: User, organizationId?: string): Promise<AuthTokens> {
     const scopeInfo = organizationId
       ? await this.loadScopesForMembership(user.id, organizationId)
@@ -164,6 +197,13 @@ export class AuthService {
     }
 
     return { scopes: [...scopes], isOrgAdmin, membershipId: membership.id };
+  }
+
+  private hashOpaqueToken(rawToken: string): string {
+    // A fast, deterministic hash — unlike bcrypt, this needs to support an exact-match
+    // lookup by a unique column, not a slow brute-force-resistant comparison. The tokens
+    // being hashed are already high-entropy random bytes, so speed isn't a liability here.
+    return createHash('sha256').update(rawToken).digest('hex');
   }
 
   private toPublicUser(user: User): Omit<User, 'passwordHash'> {

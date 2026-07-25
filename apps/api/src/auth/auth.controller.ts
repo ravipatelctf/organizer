@@ -16,7 +16,7 @@ import { GetCurrentUser, Public } from '../common/decorators';
 import { RtGuard } from '../common/guards/rt.guard';
 import { JwtPayload } from '../common/types/jwt-payload.type';
 import { AuthService, RefreshSession } from './auth.service';
-import { LoginDto, RegisterDto } from './dto';
+import { ForgotPasswordDto, LoginDto, RegisterDto, ResetPasswordDto } from './dto';
 
 const REFRESH_COOKIE_NAME = 'refresh_token';
 const REFRESH_COOKIE_PATH = '/auth';
@@ -58,6 +58,22 @@ export class AuthController {
     const rawToken = req.cookies?.[REFRESH_COOKIE_NAME] as string | undefined;
     await this.authService.logout(rawToken);
     res.clearCookie(REFRESH_COOKIE_NAME, { path: REFRESH_COOKIE_PATH });
+    return { success: true };
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    await this.authService.forgotPassword(dto);
+    return { success: true };
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    await this.authService.resetPassword(dto);
     return { success: true };
   }
 

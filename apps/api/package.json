@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "prisma generate && nest build",
+    "vercel-build": "prisma generate && (if [ \"$VERCEL_ENV\" = production ]; then prisma migrate deploy; fi) && nest build",
     "dev": "prisma generate && nest start --watch",
     "start": "node dist/main.js",
     "lint": "eslint \"src/**/*.ts\"",

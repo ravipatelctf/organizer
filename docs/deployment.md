@@ -1,9 +1,12 @@
 # Deployment
 
 `organizer` deploys as two Vercel projects from this one monorepo, both reading the same Neon
-database, behind a rewrite that makes the pair same-origin. This is the runbook for doing that by
-hand from a clone with an empty Vercel account. Nothing here has been run against a live
-deployment yet — treat every command as untested until you've run it once.
+database, behind a rewrite that makes the pair same-origin. This is the runbook for doing that from
+a clone with an empty Vercel account — it reflects the actual `organizer-api` / `organizer-web`
+projects live under this account (team `ravi-shankar-patels-projects`), so the gotchas below (the
+portable-shell script, the Corepack env var, the workspace pre-build) are things that were hit and
+fixed here, not theoretical. The one thing not yet done is the `shiksha.ravipatelctf.com` custom
+domain — see §5.
 
 ## Prerequisites
 
@@ -19,10 +22,10 @@ deployment yet — treat every command as untested until you've run it once.
 
 Both from the same GitHub repo, distinguished by root directory:
 
-| Project | Root directory | Build command                                                             | Domain                     |
-| ------- | -------------- | ------------------------------------------------------------------------- | -------------------------- |
-| `web`   | `apps/web`     | (framework default → Next.js)                                             | `shiksha.ravipatelctf.com` |
-| `api`   | `apps/api`     | (framework default; Vercel auto-detects `vercel-build` in `package.json`) | default `*.vercel.app`     |
+| Project         | Root directory | Build command                                                             | Domain                                                             |
+| --------------- | -------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `organizer-web` | `apps/web`     | (framework default → Next.js)                                             | `organizer-web-theta.vercel.app`, later `shiksha.ravipatelctf.com` |
+| `organizer-api` | `apps/api`     | (framework default; Vercel auto-detects `vercel-build` in `package.json`) | `organizer-api.vercel.app`                                         |
 
 The `api` project needs no custom domain — the `web` project reaches it only through the rewrite
 in `apps/web/vercel.ts`, never directly.
@@ -33,30 +36,36 @@ Set these in each project's Vercel dashboard (Settings → Environment Variables
 Production (and Preview, for `api`, if you want preview deploys to boot at all — see the
 migration-guard note below before doing that).
 
-| Variable                    | Value                                                              | Project |
-| --------------------------- | ------------------------------------------------------------------ | ------- |
-| `DATABASE_URL`              | Neon **pooled** connection string                                  | `api`   |
-| `DIRECT_URL`                | Same host with `-pooler` removed                                   | `api`   |
-| `AT_SECRET`                 | `openssl rand -hex 64` — generate once                             | `api`   |
-| `RT_SECRET`                 | `openssl rand -hex 64` — generate once, different from `AT_SECRET` | `api`   |
-| `WEB_ORIGIN`                | `https://shiksha.ravipatelctf.com`                                 | `api`   |
-| `PORT`                      | Not needed — Vercel supplies its own                               | —       |
-| `NEXT_PUBLIC_API_BASE_PATH` | `/api`                                                             | `web`   |
+| Variable                       | Value                                                              | Project |
+| ------------------------------ | ------------------------------------------------------------------ | ------- |
+| `DATABASE_URL`                 | Neon **pooled** connection string                                  | `api`   |
+| `DIRECT_URL`                   | Same host with `-pooler` removed                                   | `api`   |
+| `AT_SECRET`                    | `openssl rand -hex 64` — generate once                             | `api`   |
+| `RT_SECRET`                    | `openssl rand -hex 64` — generate once, different from `AT_SECRET` | `api`   |
+| `WEB_ORIGIN`                   | `https://shiksha.ravipatelctf.com`                                 | `api`   |
+| `PORT`                         | Not needed — Vercel supplies its own                               | —       |
+| `ENABLE_EXPERIMENTAL_COREPACK` | `1`                                                                | both    |
+| `NEXT_PUBLIC_API_BASE_PATH`    | `/api`                                                             | `web`   |
 
 `AT_SECRET` and `RT_SECRET` must be generated once and kept identical across the project's
 environments — rotating either invalidates every outstanding token and session.
 
+`ENABLE_EXPERIMENTAL_COREPACK` is what actually makes the `packageManager` field in §4 take
+effect — without it, Vercel's build silently used system Yarn Classic instead of activating Yarn
+4 via Corepack, and the very first build command it ran (`yarn install`) failed trying to fetch
+`@repo/eslint-config` from the npm registry instead of resolving it as a workspace package.
+
 ## 3. Point the rewrite at the real api URL
 
-`apps/web/vercel.ts` ships with a placeholder:
+`apps/web/vercel.ts` rewrites to the `api` project's real production URL:
 
 ```ts
-routes.rewrite('/api/(.*)', 'https://<api-project>.vercel.app/$1');
+routes.rewrite('/api/(.*)', 'https://organizer-api.vercel.app/$1');
 ```
 
-Once the `api` project exists, replace `<api-project>.vercel.app` with its actual `*.vercel.app`
-production URL and redeploy `web`. This is what makes the pair same-origin from the browser's
-point of view — no CORS configuration, and the refresh-token cookie never crosses a site boundary.
+If the `api` project is ever recreated under a different name, update the host here and redeploy
+`web`. This is what makes the pair same-origin from the browser's point of view — no CORS
+configuration, and the refresh-token cookie never crosses a site boundary.
 
 ## 4. The migration guard
 
@@ -118,15 +127,16 @@ report it verified.
 
 1. Check the `api` project's build log for the `prisma migrate deploy` step — it should list the
    migrations it applied (or say there's nothing to do, on a redeploy).
-2. `curl -s https://<api-project>.vercel.app/health` — expect `200`.
+2. `curl -s https://organizer-api.vercel.app/health` — expect `200`.
 3. Seed the database once, from your machine, against the **direct** Neon URL (not through
    Vercel — this is a one-shot operation, not part of the deploy):
    ```sh
    yarn workspace api prisma db seed
    ```
-4. Visit `https://shiksha.ravipatelctf.com`, log in with one of the demo credentials in the root
-   `README.md`, and confirm the request round-trips through `/api/*` (check the network tab — the
-   request should stay on `shiksha.ravipatelctf.com`, not go to the `api` project's own domain).
+4. Visit `https://organizer-web-theta.vercel.app` (or `https://shiksha.ravipatelctf.com` once §5's
+   DNS is live), log in with one of the demo credentials in the root `README.md`, and confirm the
+   request round-trips through `/api/*` (check the network tab — the request should stay on the
+   `web` project's own domain, not go to `organizer-api.vercel.app` directly).
 5. Re-run the isolation matrix by hand against the live URL — this is the phase's actual
    acceptance check. Reproduce each row from
    `brainstorm/implementation-phases.md` §11 with the seeded fixtures:

@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto';
 
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { User } from '@prisma/client';
+import { Session, User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 import { JwtPayload } from '../common/types/jwt-payload.type';
@@ -17,6 +17,11 @@ const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
+}
+
+export interface RefreshSession {
+  session: Session;
+  user: User;
 }
 
 @Injectable()
@@ -51,6 +56,54 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  // Validates the raw refresh token presented on the cookie. Cross-boundary and expiry
+  // failures are both a 403 — presenting a dead token is never distinguished from a valid
+  // one belonging to someone else.
+  async validateRefreshToken(rawToken: string): Promise<RefreshSession> {
+    const session = await this.prisma.session.findUnique({ where: { token: rawToken } });
+    if (!session) {
+      throw new ForbiddenException('Refresh token is invalid.');
+    }
+
+    if (session.expiresAt.getTime() <= Date.now()) {
+      await this.prisma.session.delete({ where: { id: session.id } }).catch(() => undefined);
+      throw new ForbiddenException('Refresh token has expired.');
+    }
+
+    // Re-check that the membership is still ACTIVE before re-issuing scopes — this is what
+    // cuts off a suspended member on their very next refresh.
+    if (session.organizationId) {
+      const membership = await this.prisma.orgMembership.findUnique({
+        where: {
+          organizationId_userId: { organizationId: session.organizationId, userId: session.userId },
+        },
+      });
+      if (!membership || membership.status !== 'ACTIVE' || membership.deletedAt) {
+        await this.prisma.session.delete({ where: { id: session.id } }).catch(() => undefined);
+        throw new ForbiddenException('Membership is no longer active.');
+      }
+    }
+
+    const user = await this.usersService.findById(session.userId);
+    if (!user || user.deletedAt) {
+      throw new ForbiddenException('Account is no longer active.');
+    }
+
+    return { session, user };
+  }
+
+  // Rotation deletes the old row and issues a new one; the old refresh token is rejected
+  // the moment this returns.
+  async rotateRefreshToken({ session, user }: RefreshSession): Promise<AuthTokens> {
+    await this.prisma.session.delete({ where: { id: session.id } });
+    return this.issueTokens(user, session.organizationId ?? undefined);
+  }
+
+  async logout(rawToken: string | undefined): Promise<void> {
+    if (!rawToken) return;
+    await this.prisma.session.deleteMany({ where: { token: rawToken } });
   }
 
   private async issueTokens(user: User, organizationId?: string): Promise<AuthTokens> {

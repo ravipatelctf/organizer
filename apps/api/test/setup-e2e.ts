@@ -1,5 +1,6 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import cookieParser from 'cookie-parser';
 
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -9,14 +10,15 @@ export interface TestApp {
   prisma: PrismaService;
 }
 
-// Boots the Nest app once per suite with the same global pipes as main.ts. If the test app
-// is configured differently from the real one, the tests are theatre.
+// Boots the Nest app once per suite with the same global pipes and middleware as main.ts.
+// If the test app is configured differently from the real one, the tests are theatre.
 export async function createTestApp(): Promise<TestApp> {
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
   }).compile();
 
   const app = moduleRef.createNestApplication();
+  app.use(cookieParser());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

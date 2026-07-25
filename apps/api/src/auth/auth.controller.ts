@@ -1,9 +1,10 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Res } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 
 import { Public } from '../common/decorators';
-import { AuthService } from './auth.service';
+import { RtGuard } from '../common/guards/rt.guard';
+import { AuthService, RefreshSession } from './auth.service';
 import { LoginDto, RegisterDto } from './dto';
 
 const REFRESH_COOKIE_NAME = 'refresh_token';
@@ -27,6 +28,26 @@ export class AuthController {
     const { accessToken, refreshToken, user } = await this.authService.login(dto);
     this.setRefreshCookie(res, refreshToken);
     return { accessToken, user };
+  }
+
+  @Public()
+  @UseGuards(RtGuard)
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const refreshSession = req.user as unknown as RefreshSession;
+    const { accessToken, refreshToken } = await this.authService.rotateRefreshToken(refreshSession);
+    this.setRefreshCookie(res, refreshToken);
+    return { accessToken };
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const rawToken = req.cookies?.[REFRESH_COOKIE_NAME] as string | undefined;
+    await this.authService.logout(rawToken);
+    res.clearCookie(REFRESH_COOKIE_NAME, { path: REFRESH_COOKIE_PATH });
+    return { success: true };
   }
 
   private setRefreshCookie(res: Response, refreshToken: string): void {

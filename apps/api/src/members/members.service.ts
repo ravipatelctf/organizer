@@ -10,7 +10,10 @@ export class MembersService {
   listForOrg(organizationId: string) {
     return this.prisma.orgMembership.findMany({
       where: { organizationId, status: { in: ['ACTIVE', 'SUSPENDED'] }, deletedAt: null },
-      include: { user: true, roles: { include: { role: true } } },
+      include: {
+        user: { omit: { passwordHash: true } },
+        roles: { include: { role: true } },
+      },
       orderBy: { createdAt: 'asc' },
     });
   }

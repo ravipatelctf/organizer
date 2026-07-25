@@ -46,7 +46,7 @@ model Organization {
   projects       Project[]
   projectMembers ProjectMember[]
   tasks          Task[]
-  // auditLogs added in phase 8
+  auditLogs      AuditLog[]
 
   @@map("organizations")
 }
@@ -209,4 +209,21 @@ model Session {
 
   @@index([organizationId])
   @@map("sessions")
+}
+
+model AuditLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String?  @map("organization_id") @db.Uuid // null = platform-level action
+  actorUserId    String?  @map("actor_user_id") @db.Uuid
+  action         String   @db.VarChar(100) // "project.create", "member.suspend"
+  resourceType   String   @map("resource_type") @db.VarChar(50)
+  resourceId     String?  @map("resource_id") @db.Uuid
+  metadata       Json     @default("{}") @db.JsonB
+  ipAddress      String?  @map("ip_address") @db.VarChar(45)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@map("audit_logs")
 }

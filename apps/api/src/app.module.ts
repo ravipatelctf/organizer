@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -6,6 +6,8 @@ import { Pool } from 'pg';
 
 import { AuthModule } from './auth/auth.module';
 import { AtGuard } from './common/guards/at.guard';
+import { OrgGuard } from './common/guards/org.guard';
+import { ResolveOrgMiddleware } from './common/middleware/resolve-org.middleware';
 import { HealthModule } from './health/health.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -27,6 +29,13 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     OrganizationsModule,
   ],
-  providers: [{ provide: APP_GUARD, useClass: AtGuard }],
+  providers: [
+    { provide: APP_GUARD, useClass: AtGuard },
+    { provide: APP_GUARD, useClass: OrgGuard },
+  ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(ResolveOrgMiddleware).forRoutes('orgs/:orgSlug', 'orgs/:orgSlug/*splat');
+  }
+}

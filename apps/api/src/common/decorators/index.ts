@@ -1,3 +1,5 @@
+export { AUDIT_KEY, Audit } from './audit.decorator';
+export type { AuditMetadata } from './audit.decorator';
 export { GetCurrentUserId } from './get-current-user-id.decorator';
 export { GetCurrentUser } from './get-current-user.decorator';
 export { OrgContext } from './org-context.decorator';

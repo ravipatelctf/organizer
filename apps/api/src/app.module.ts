@@ -5,6 +5,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
 import { AdminModule } from './admin/admin.module';
+import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { AtGuard } from './common/guards/at.guard';
 import { OrgGuard } from './common/guards/org.guard';
@@ -45,6 +46,7 @@ import { UsersModule } from './users/users.module';
     ProjectsModule,
     ProjectMembersModule,
     TasksModule,
+    AuditModule,
     AdminModule,
   ],
   providers: [

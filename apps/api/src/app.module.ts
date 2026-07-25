@@ -9,6 +9,7 @@ import { AtGuard } from './common/guards/at.guard';
 import { OrgGuard } from './common/guards/org.guard';
 import { ResolveOrgMiddleware } from './common/middleware/resolve-org.middleware';
 import { HealthModule } from './health/health.module';
+import { MembersModule } from './members/members.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
@@ -28,6 +29,7 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     AuthModule,
     OrganizationsModule,
+    MembersModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: AtGuard },

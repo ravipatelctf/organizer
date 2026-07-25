@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
+import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { AtGuard } from './common/guards/at.guard';
 import { OrgGuard } from './common/guards/org.guard';
@@ -44,6 +45,7 @@ import { UsersModule } from './users/users.module';
     ProjectsModule,
     ProjectMembersModule,
     TasksModule,
+    AdminModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: AtGuard }, // authenticate

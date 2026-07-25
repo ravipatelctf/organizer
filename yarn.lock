@@ -5462,6 +5462,33 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@vercel/config@npm:^0.5.5":
+  version: 0.5.5
+  resolution: "@vercel/config@npm:0.5.5"
+  dependencies:
+    "@vercel/routing-utils": "npm:6.4.0"
+    pretty-cache-header: "npm:^1.0.0"
+    zod: "npm:^3.22.0"
+  bin:
+    config: dist/cli.js
+  checksum: 10c0/49f05ea2018449fcd80a9e1a33cd15edc5d54c79de35e833c908352db72a10591e85a4c8924c03d8dcc13f0e59020ddedd228bdd17e188b5a93d99c781d3745f
+  languageName: node
+  linkType: hard
+
+"@vercel/routing-utils@npm:6.4.0":
+  version: 6.4.0
+  resolution: "@vercel/routing-utils@npm:6.4.0"
+  dependencies:
+    ajv: "npm:^6.12.3"
+    path-to-regexp: "npm:6.1.0"
+    path-to-regexp-updated: "npm:path-to-regexp@6.3.0"
+  dependenciesMeta:
+    ajv:
+      optional: true
+  checksum: 10c0/af56bbede1f8767de868ad925a13eafff9bd730cf59660d1e3d54993f843eef8cac8d55e4b9be7a1ed590723d7c8083ba70c6fe5711df25c1b2be40767878cf1
+  languageName: node
+  linkType: hard
+
 "@visx/curve@npm:4.0.1-alpha.0":
   version: 4.0.1-alpha.0
   resolution: "@visx/curve@npm:4.0.1-alpha.0"
@@ -5875,7 +5902,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ajv@npm:^6.12.5, ajv@npm:^6.14.0":
+"ajv@npm:^6.12.3, ajv@npm:^6.12.5, ajv@npm:^6.14.0":
   version: 6.15.0
   resolution: "ajv@npm:6.15.0"
   dependencies:
@@ -11436,6 +11463,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"path-to-regexp-updated@npm:path-to-regexp@6.3.0":
+  version: 6.3.0
+  resolution: "path-to-regexp@npm:6.3.0"
+  checksum: 10c0/73b67f4638b41cde56254e6354e46ae3a2ebc08279583f6af3d96fe4664fc75788f74ed0d18ca44fa4a98491b69434f9eee73b97bb5314bd1b5adb700f5c18d6
+  languageName: node
+  linkType: hard
+
+"path-to-regexp@npm:6.1.0":
+  version: 6.1.0
+  resolution: "path-to-regexp@npm:6.1.0"
+  checksum: 10c0/0c22bce52528452ee5717d71c2dc2b273d065a633de25c959d684980d1ff0891225a3dc94095421fe508aaa76f8b26a173954a3aef3c841a2a824bd6bf849963
+  languageName: node
+  linkType: hard
+
 "path-to-regexp@npm:8.4.2, path-to-regexp@npm:^8.0.0":
   version: 8.4.2
   resolution: "path-to-regexp@npm:8.4.2"
@@ -11723,6 +11764,15 @@ __metadata:
   bin:
     prettier: bin/prettier.cjs
   checksum: 10c0/9f7ddae234035868f3daab3dc34e6de7e54622185afb017378029f0c09a9c023248ccf6f34def0b17a0538e18c47aa1b3188bab72965d1bf735919baa0747e99
+  languageName: node
+  linkType: hard
+
+"pretty-cache-header@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "pretty-cache-header@npm:1.0.0"
+  dependencies:
+    timestring: "npm:^6.0.0"
+  checksum: 10c0/e9129e6a6cd6bee308ac1cc347f6fc536d4f2fa4b2b7048af0ef2ac22880cbfda0834b6c32946437a75dc1004f95c1ebf4c583e4c69fa819958c92c59370673e
   languageName: node
   linkType: hard
 
@@ -13202,6 +13252,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"timestring@npm:^6.0.0":
+  version: 6.0.0
+  resolution: "timestring@npm:6.0.0"
+  checksum: 10c0/753688c0f6ebdec5af6a77a01ad85b5fd868d04d2d1e7510bb23b2554236ea400f008b0b358a54f148c2aa0cf517494e786f20b61d8a7477d7fa4438f33bf84e
+  languageName: node
+  linkType: hard
+
 "tinyglobby@npm:^0.2.12, tinyglobby@npm:^0.2.13, tinyglobby@npm:^0.2.15":
   version: 0.2.17
   resolution: "tinyglobby@npm:0.2.17"
@@ -13887,6 +13944,7 @@ __metadata:
     "@types/node": "npm:^20"
     "@types/react": "npm:^19"
     "@types/react-dom": "npm:^19"
+    "@vercel/config": "npm:^0.5.5"
     axios: "npm:^1.18.1"
     class-variance-authority: "npm:^0.7.1"
     clsx: "npm:^2.1.1"
@@ -14242,7 +14300,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zod@npm:^3.24.1":
+"zod@npm:^3.22.0, zod@npm:^3.24.1":
   version: 3.25.76
   resolution: "zod@npm:3.25.76"
   checksum: 10c0/5718ec35e3c40b600316c5b4c5e4976f7fee68151bc8f8d90ec18a469be9571f072e1bbaace10f1e85cf8892ea12d90821b200e980ab46916a6166a4260a983c

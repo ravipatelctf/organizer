@@ -1,9 +1,20 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 
-import { Public } from '../common/decorators';
+import { GetCurrentUser, Public } from '../common/decorators';
 import { RtGuard } from '../common/guards/rt.guard';
+import { JwtPayload } from '../common/types/jwt-payload.type';
 import { AuthService, RefreshSession } from './auth.service';
 import { LoginDto, RegisterDto } from './dto';
 
@@ -48,6 +59,11 @@ export class AuthController {
     await this.authService.logout(rawToken);
     res.clearCookie(REFRESH_COOKIE_NAME, { path: REFRESH_COOKIE_PATH });
     return { success: true };
+  }
+
+  @Get('me')
+  me(@GetCurrentUser() user: JwtPayload) {
+    return user;
   }
 
   private setRefreshCookie(res: Response, refreshToken: string): void {

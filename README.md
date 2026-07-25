@@ -43,8 +43,8 @@ talks to hosted Neon PostgreSQL, there is no local database and no Docker for de
 2. `cp apps/api/.env.example apps/api/.env` and fill in `DATABASE_URL` (the pooled string) and
    `DIRECT_URL` (the same host with `-pooler` removed) — see `docs/data-model.md` for why both
    exist. Generate `AT_SECRET` and `RT_SECRET` with `openssl rand -hex 64` each.
-3. `cp apps/web/.env.example apps/web/.env` — leave `NEXT_PUBLIC_API_BASE_PATH` empty for local
-   dev; the web app talks to `http://localhost:8000` directly.
+3. `cp apps/web/.env.example apps/web/.env` — its default, `http://localhost:8000`, is used as-is
+   for local dev, so the web app talks to the api directly.
 4. Apply migrations and seed demo data:
    ```sh
    yarn workspace api prisma migrate deploy

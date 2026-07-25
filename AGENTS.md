@@ -75,8 +75,66 @@ building this from a clean specification.
 
 ## Isolation invariants
 
-Added in Phase 6, once `common/scope/` exists. This will be the most important section in this
-file — read it before touching anything that queries `Project` or `Task`.
+Read this before touching anything that queries `Project` or `Task`.
+
+**The choke point.** `apps/api/src/common/scope/project-scope.util.ts` is the only place a
+`Project` tenant filter is constructed. Every `findMany` / `findFirst` / `count` on `Project`
+spreads `projectWhere(ctx)`. No service hand-rolls `where: { organizationId }`. When adding an
+`id` to a query, spread `projectWhere(ctx)` first and the `id` second — never let a caller-supplied
+key shadow a scope key.
+
+**Why there is no "no filter" branch.** An absent tenant filter is the anti-pattern, so the helper
+cannot express one. Superadmins never reach `projectWhere` — they are served by `AdminService` on
+`/admin/*` (Phase 8), with an explicit `organizationId` filter. Do not "fix" the missing branch by
+adding one; that is the failure mode this phase exists to prevent.
+
+**404, not 403, across boundaries.** `ProjectAccessService.assertVisible` throws
+`NotFoundException` when a project id doesn't resolve under the caller's scope — a 403 would
+confirm the row exists in another organization, which is an existence leak. In-boundary permission
+failures (e.g. holding `view-own-projects` but not `edit-projects`) still return 403 via
+`PermissionsGuard`. This is why `PermissionsGuard` is registered _before_ `ProjectScopeGuard`: a
+member editing their own project without `edit-projects` must get 403, not 404.
+
+**The guard chain**, in registration order (`app.module.ts`'s `APP_GUARD` array):
+
+| Guard               | Checks                                                       |
+| ------------------- | ------------------------------------------------------------ |
+| `AtGuard`           | Authenticates the JWT                                        |
+| `OrgGuard`          | Token's org matches the URL's org                            |
+| `PermissionsGuard`  | Scopes satisfy `@RequirePermissions()`                       |
+| `ProjectScopeGuard` | `:projectId` (if present) resolves under `projectWhere(ctx)` |
+
+`ProjectScopeGuard` is a no-op — `return true` — on any route with no `:projectId` param, which is
+what lets it register globally without touching every other route in the app.
+
+**`:projectId`, not `:id`.** Every project-scoped controller route names its project-id param
+`:projectId` literally, because `ProjectScopeGuard` looks up that exact name. Naming it `:id` (the
+convention everywhere else in the app) silently disables the guard on that route.
+
+**Tenant identity comes from the token, never the URL or the body.** `AccessContext.orgId` is
+read from the verified JWT (`user.orgId`), not from `req.organization` (which only names which org
+the URL is addressing — see `ResolveOrgMiddleware`'s own comment) and not from a request body. This
+extends the existing DTO rule: no DTO may declare an `organizationId` _or_ `projectId` field.
+
+**Membership is the `own`-filter mechanism.** `getViewScope(ctx.scopes, 'project', { isAdmin })`
+resolves to `'all'` (org admins and `view-projects` holders — organization-wide), `'own'`
+(`view-own-projects` holders — `members: { some: { orgMembershipId: ctx.membershipId, deletedAt: null } }`),
+or `'none'` (neither — `projectWhere` throws). Soft-deleting a `ProjectMember` therefore revokes
+visibility immediately, which is why both project removal and project-member removal are soft
+deletes (`deletedAt`), not hard deletes — a hard delete would make `projectWhere`'s own
+`deletedAt: null` filter dead code.
+
+**`AccessContext` is shared, not duplicated.** `buildAccessContext()` in `access-context.ts` is
+the one function that turns `req.user` + `req.organization` into an `AccessContext`. Both `@Ctx()`
+(for handlers) and `ProjectScopeGuard` (which runs before param decorators resolve, so it can't use
+`@Ctx()` itself) call it — this is what keeps the guard's notion of "who is asking" from ever
+drifting from the handler's.
+
+**Forward reference — `taskWhere` (Phase 7).** `Prisma.TaskWhereInput` doesn't exist until the
+`Task` model lands in Phase 7's `add_tasks` migration, so `taskWhere` isn't implemented yet. When it
+arrives it will be `{ deletedAt: null, project: projectWhere(ctx) }` — isolation is transitive
+through the project, and `Task` gets no tenant filter of its own. A new module touching tasks gets
+isolation by spreading `taskWhere`, not by writing its own `projectId`/`organizationId` check.
 
 ---
 

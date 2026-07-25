@@ -9,6 +9,7 @@ import { AtGuard } from './common/guards/at.guard';
 import { OrgGuard } from './common/guards/org.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { ResolveOrgMiddleware } from './common/middleware/resolve-org.middleware';
+import { ScopeModule } from './common/scope/scope.module';
 import { HealthModule } from './health/health.module';
 import { InvitationsModule } from './invitations/invitations.module';
 import { MembersModule } from './members/members.module';
@@ -28,6 +29,7 @@ import { UsersModule } from './users/users.module';
         return { prismaOptions: { adapter: new PrismaPg(pool) } };
       },
     }),
+    ScopeModule,
     HealthModule,
     UsersModule,
     AuthModule,

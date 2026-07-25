@@ -10,8 +10,9 @@ import {
   Post,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { PERMS } from '@repo/permissions';
 
-import { OrgContext } from '../common/decorators';
+import { OrgContext, RequirePermissions } from '../common/decorators';
 import { CreateRoleDto, UpdateRoleDto } from './dto';
 import { RolesService } from './roles.service';
 
@@ -20,16 +21,19 @@ import { RolesService } from './roles.service';
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
+  @RequirePermissions(PERMS.role.view)
   @Get('orgs/:orgSlug/roles')
   list(@OrgContext() organization: { id: string }) {
     return this.rolesService.listForOrg(organization.id);
   }
 
+  @RequirePermissions(PERMS.role.create)
   @Post('orgs/:orgSlug/roles')
   create(@OrgContext() organization: { id: string }, @Body() dto: CreateRoleDto) {
     return this.rolesService.create(organization.id, dto);
   }
 
+  @RequirePermissions(PERMS.role.edit)
   @Patch('orgs/:orgSlug/roles/:id')
   update(
     @OrgContext() organization: { id: string },
@@ -39,6 +43,7 @@ export class RolesController {
     return this.rolesService.update(organization.id, roleId, dto);
   }
 
+  @RequirePermissions(PERMS.role.delete)
   @Delete('orgs/:orgSlug/roles/:id')
   @HttpCode(HttpStatus.OK)
   async remove(@OrgContext() organization: { id: string }, @Param('id') roleId: string) {

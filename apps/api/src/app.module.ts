@@ -7,6 +7,7 @@ import { Pool } from 'pg';
 import { AuthModule } from './auth/auth.module';
 import { AtGuard } from './common/guards/at.guard';
 import { OrgGuard } from './common/guards/org.guard';
+import { PermissionsGuard } from './common/guards/permissions.guard';
 import { ResolveOrgMiddleware } from './common/middleware/resolve-org.middleware';
 import { HealthModule } from './health/health.module';
 import { InvitationsModule } from './invitations/invitations.module';
@@ -38,6 +39,7 @@ import { UsersModule } from './users/users.module';
   providers: [
     { provide: APP_GUARD, useClass: AtGuard },
     { provide: APP_GUARD, useClass: OrgGuard },
+    { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
 })
 export class AppModule implements NestModule {

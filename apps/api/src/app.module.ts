@@ -15,6 +15,7 @@ import { InvitationsModule } from './invitations/invitations.module';
 import { MembersModule } from './members/members.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { ProjectMembersModule } from './project-members/project-members.module';
 import { ProjectsModule } from './projects/projects.module';
 import { RolesModule } from './roles/roles.module';
 import { UsersModule } from './users/users.module';
@@ -39,6 +40,7 @@ import { UsersModule } from './users/users.module';
     InvitationsModule,
     RolesModule,
     ProjectsModule,
+    ProjectMembersModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: AtGuard },

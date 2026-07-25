@@ -22,3 +22,7 @@ export async function forgotPassword(input: { email: string }): Promise<void> {
 export async function resetPassword(input: { token: string; newPassword: string }): Promise<void> {
   await apiClient.post('/auth/reset-password', input);
 }
+
+export async function logout(): Promise<void> {
+  await apiClient.post('/auth/logout');
+}

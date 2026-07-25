@@ -56,6 +56,15 @@ per-workspace commands, run from `apps/api`:
 | `yarn workspace api prisma ...`     | Any Prisma CLI command, config-driven via `prisma.config.ts`               |
 | `yarn workspace api prisma db seed` | Seeds deterministic fixtures (superadmin, two organizations) into `public` |
 
+## Deployment
+
+Two Vercel projects from this monorepo — `apps/web` (root `apps/web`) and `apps/api` (root
+`apps/api`) — sharing one Neon database. `apps/web/vercel.ts` rewrites `/api/*` to the `api`
+project so the pair is same-origin. `apps/api/package.json`'s `vercel-build` script only runs
+`prisma migrate deploy` when `VERCEL_ENV=production`, so opening a preview deployment never
+migrates the one production database. Full runbook — project setup, env vars, DNS, and the
+post-deploy isolation checklist — in `docs/deployment.md`.
+
 ## Module conventions (API)
 
 Established in full once the first feature module lands (Phase 3). Each feature module under

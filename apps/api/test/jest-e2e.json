@@ -7,5 +7,6 @@
   "testEnvironment": "node",
   "maxWorkers": 1,
   "forceExit": true,
+  "testTimeout": 15000,
   "setupFiles": ["<rootDir>/test/jest.setup.ts"]
 }

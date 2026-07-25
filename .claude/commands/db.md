@@ -34,8 +34,17 @@ Rules: forward-only (no down-migrations), never edit a migration that has alread
 
 ## Seeding
 
-Not added until Phase 4 (roles seeded at org-creation time) and Phase 9 (`prisma/seed.ts` fixtures).
-Once it exists: `yarn workspace api prisma db seed`.
+Two mechanisms, added in different phases: roles are seeded at org-creation time (Phase 4, live
+application behaviour — not a migration), and `apps/api/prisma/seed.ts` (Phase 9) seeds
+deterministic demo/test fixtures — a superadmin and two organizations (`acme`, `globex`) with
+projects, tasks, and members. Run it with:
+
+```sh
+yarn workspace api prisma db seed
+```
+
+It connects via `DIRECT_URL` and writes to whichever schema that URL points at — `public` by
+default. Never run it against a schema you don't intend to repopulate; it isn't idempotent.
 
 ## Tests
 

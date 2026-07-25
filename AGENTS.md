@@ -50,10 +50,11 @@ Run from the repo root unless noted.
 Database and migration commands are documented in `.claude/commands/db.md`. Two additional
 per-workspace commands, run from `apps/api`:
 
-| Command                         | Does                                                         |
-| ------------------------------- | ------------------------------------------------------------ |
-| `yarn workspace api test:e2e`   | Runs the e2e suite against the Neon `test` schema (real DB)  |
-| `yarn workspace api prisma ...` | Any Prisma CLI command, config-driven via `prisma.config.ts` |
+| Command                             | Does                                                                       |
+| ----------------------------------- | -------------------------------------------------------------------------- |
+| `yarn workspace api test:e2e`       | Runs the e2e suite against the Neon `test` schema (real DB)                |
+| `yarn workspace api prisma ...`     | Any Prisma CLI command, config-driven via `prisma.config.ts`               |
+| `yarn workspace api prisma db seed` | Seeds deterministic fixtures (superadmin, two organizations) into `public` |
 
 ## Module conventions (API)
 
@@ -130,11 +131,19 @@ the one function that turns `req.user` + `req.organization` into an `AccessConte
 `@Ctx()` itself) call it — this is what keeps the guard's notion of "who is asking" from ever
 drifting from the handler's.
 
-**Forward reference — `taskWhere` (Phase 7).** `Prisma.TaskWhereInput` doesn't exist until the
-`Task` model lands in Phase 7's `add_tasks` migration, so `taskWhere` isn't implemented yet. When it
-arrives it will be `{ deletedAt: null, project: projectWhere(ctx) }` — isolation is transitive
-through the project, and `Task` gets no tenant filter of its own. A new module touching tasks gets
-isolation by spreading `taskWhere`, not by writing its own `projectId`/`organizationId` check.
+**`taskWhere` is transitive through the project.** `taskWhere(ctx)` is
+`{ deletedAt: null, project: projectWhere(ctx) }` — `Task` carries no tenant filter of its own. A
+module touching tasks gets isolation by spreading `taskWhere`, not by writing its own
+`projectId`/`organizationId` check.
+
+**The proof is `apps/api/test/isolation.e2e-spec.ts`.** The cross-boundary matrix — every actor
+shape against every kind of boundary, from `brainstorm/implementation-phases.md` §11 — lives there
+as one table test, backed by a CI-enforced guardrail
+(`apps/api/src/common/scope/guardrail.spec.ts`) that greps `src/**` (excluding `admin/`, where the
+absent filter is deliberate) for a `prisma.project.find*` / `prisma.task.find*` / `.count` call
+missing `projectWhere`/`taskWhere` and fails the build if one appears. See
+`docs/isolation-model.md` for the full writeup and `.claude/commands/verify-isolation.md` for how
+to run and read both.
 
 ---
 

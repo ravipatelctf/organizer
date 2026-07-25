@@ -1,10 +1,18 @@
 import { randomUUID } from 'node:crypto';
 
-import { Organization, OrgMembership, PrismaClient, Role, User } from '@prisma/client';
+import {
+  Organization,
+  OrgMembership,
+  PrismaClient,
+  Project,
+  ProjectMember,
+  Role,
+  User,
+} from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
-// The isolation matrix (Phase 9) is unreadable without these. Extended with makeProject/
-// makeTask in Phase 6/7 once those models exist.
+// The isolation matrix (Phase 9) is unreadable without these. Extended with makeTask in
+// Phase 7 once that model exists.
 
 // Every factory-made user shares this password, matching the uniform-password fixture
 // convention from Phase 9 — test/auth.ts's login() defaults to it.
@@ -86,4 +94,38 @@ export async function makeMembership(
   }
 
   return membership;
+}
+
+export async function makeProject(
+  prisma: PrismaClient,
+  organizationId: string,
+  overrides: Partial<{ key: string; name: string; status: string }> = {},
+): Promise<Project> {
+  const suffix = randomUUID().slice(0, 8);
+  return prisma.project.create({
+    data: {
+      organizationId,
+      key: overrides.key ?? `P${suffix.slice(0, 4).toUpperCase()}`,
+      name: overrides.name ?? `Project ${suffix}`,
+      status: overrides.status ?? 'ACTIVE',
+    },
+  });
+}
+
+// organizationId is derived from the project, never passed in — a hand-written fixture
+// getting the denormalized column wrong would silently break the member-visibility filter.
+export async function makeProjectMember(
+  prisma: PrismaClient,
+  project: Project,
+  membership: OrgMembership,
+  overrides: Partial<{ role: string }> = {},
+): Promise<ProjectMember> {
+  return prisma.projectMember.create({
+    data: {
+      organizationId: project.organizationId,
+      projectId: project.id,
+      orgMembershipId: membership.id,
+      role: overrides.role ?? 'CONTRIBUTOR',
+    },
+  });
 }

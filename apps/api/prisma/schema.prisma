@@ -40,10 +40,12 @@ model Organization {
   updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
   deletedAt   DateTime? @map("deleted_at") @db.Timestamp(6)
 
-  memberships OrgMembership[]
-  roles       Role[]
-  sessions    Session[]
-  // projects, projectMembers, tasks, auditLogs added in phases 6–8
+  memberships    OrgMembership[]
+  roles          Role[]
+  sessions       Session[]
+  projects       Project[]
+  projectMembers ProjectMember[]
+  // tasks, auditLogs added in phases 7–8
 
   @@map("organizations")
 }
@@ -62,9 +64,10 @@ model OrgMembership {
   updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
   deletedAt           DateTime? @map("deleted_at") @db.Timestamp(6)
 
-  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         User             @relation("UserMemberships", fields: [userId], references: [id], onDelete: Cascade)
-  roles        MembershipRole[]
+  organization       Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user               User             @relation("UserMemberships", fields: [userId], references: [id], onDelete: Cascade)
+  roles              MembershipRole[]
+  projectMemberships ProjectMember[]
 
   @@unique([organizationId, userId])
   @@index([userId])
@@ -115,6 +118,53 @@ model MembershipRole {
 
   @@unique([orgMembershipId, roleId])
   @@map("membership_roles")
+}
+
+// ── PROJECTS (isolation boundary #2) ────────────────────────
+model Project {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  key            String    @db.VarChar(10) // "APOLLO" → task refs APOLLO-14
+  name           String    @db.VarChar(150)
+  description    String?   @db.Text
+  status         String    @default("ACTIVE") @db.VarChar(20) // ACTIVE|ARCHIVED|COMPLETED
+  taskSequence   Int       @default(0) @map("task_sequence") // per-project task counter
+  startDate      DateTime? @map("start_date") @db.Date
+  dueDate        DateTime? @map("due_date") @db.Date
+  createdById    String?   @map("created_by") @db.Uuid
+  updatedById    String?   @map("updated_by") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamp(6)
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      ProjectMember[]
+  // tasks added in phase 7, alongside the Task model
+
+  @@unique([organizationId, key])
+  @@index([organizationId, status])
+  @@map("projects")
+}
+
+model ProjectMember {
+  id              String    @id @default(uuid()) @db.Uuid
+  organizationId  String    @map("organization_id") @db.Uuid // denormalized — see note
+  projectId       String    @map("project_id") @db.Uuid
+  orgMembershipId String    @map("org_membership_id") @db.Uuid
+  role            String    @default("CONTRIBUTOR") @db.VarChar(20) // LEAD|CONTRIBUTOR|VIEWER
+  addedById       String?   @map("added_by") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamp(6)
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  membership   OrgMembership @relation(fields: [orgMembershipId], references: [id], onDelete: Cascade)
+  // assignedTasks added in phase 7, alongside the Task model
+
+  @@unique([projectId, orgMembershipId])
+  @@index([organizationId, orgMembershipId]) // ← powers the member-visibility filter
+  @@map("project_members")
 }
 
 // ── SESSIONS & AUDIT ────────────────────────────────────────

@@ -73,6 +73,7 @@ package.json scripts through its own portable shell, which understands single co
 `&&`/`||` but not `if`/`then`/`fi` control flow. The script itself:
 
 ```sh
+yarn workspace @repo/permissions run build
 prisma generate
 if [ "$VERCEL_ENV" = "production" ]; then
   prisma migrate deploy
@@ -87,6 +88,11 @@ database to isolate that from. The guard means only a deploy that lands on the `
 environment (the default branch, typically `main`) runs `prisma migrate deploy`; every preview
 build still runs `prisma generate` and `nest build` so type-checking and the build itself are still
 verified.
+
+The leading `yarn workspace @repo/permissions run build` is there because `turbo build` (what
+`yarn build` at the repo root runs) knows `api` depends on `@repo/permissions` and builds it first;
+Vercel invokes `vercel-build` directly, bypassing that graph, so the script builds it explicitly.
+`apps/web/package.json` has the same line in its own `vercel-build` script for the same reason.
 
 **A related monorepo gotcha:** Vercel's Corepack detection reads the `packageManager` field from
 the `package.json` in the project's configured **Root Directory** (`apps/api`, `apps/web`), not

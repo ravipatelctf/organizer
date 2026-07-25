@@ -1,24 +1,31 @@
 import { randomUUID } from 'node:crypto';
 
 import { Organization, OrgMembership, PrismaClient, Role, User } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 // The isolation matrix (Phase 9) is unreadable without these. Extended with makeProject/
 // makeTask in Phase 6/7 once those models exist.
+
+// Every factory-made user shares this password, matching the uniform-password fixture
+// convention from Phase 9 — test/auth.ts's login() defaults to it.
+export const DEFAULT_TEST_PASSWORD = 'password123';
 
 export async function makeUser(
   prisma: PrismaClient,
   overrides: Partial<{
     email: string;
+    password: string;
     firstName: string;
     lastName: string;
     isSuperAdmin: boolean;
   }> = {},
 ): Promise<User> {
   const suffix = randomUUID().slice(0, 8);
+  const passwordHash = await bcrypt.hash(overrides.password ?? DEFAULT_TEST_PASSWORD, 10);
   return prisma.user.create({
     data: {
       email: overrides.email ?? `user-${suffix}@example.test`,
-      passwordHash: 'test-hash',
+      passwordHash,
       firstName: overrides.firstName ?? 'Test',
       lastName: overrides.lastName ?? 'User',
       isSuperAdmin: overrides.isSuperAdmin ?? false,

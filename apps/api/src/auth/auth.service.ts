@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 
 import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -7,6 +7,7 @@ import { Session, User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 import { JwtPayload } from '../common/types/jwt-payload.type';
+import { hashOpaqueToken } from '../common/utils/opaque-token.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { ForgotPasswordDto, LoginDto, RegisterDto, ResetPasswordDto } from './dto';
@@ -120,7 +121,7 @@ export class AuthService {
     if (!user) return;
 
     const rawToken = randomBytes(32).toString('hex');
-    const tokenHash = this.hashOpaqueToken(rawToken);
+    const tokenHash = hashOpaqueToken(rawToken);
     const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
 
     await this.usersService.setResetToken(user.id, tokenHash, expiresAt);
@@ -130,7 +131,7 @@ export class AuthService {
   }
 
   async resetPassword(dto: ResetPasswordDto): Promise<void> {
-    const tokenHash = this.hashOpaqueToken(dto.token);
+    const tokenHash = hashOpaqueToken(dto.token);
     const user = await this.usersService.findByResetTokenHash(tokenHash);
 
     if (
@@ -203,13 +204,6 @@ export class AuthService {
     }
 
     return { scopes: [...scopes], isOrgAdmin, membershipId: membership.id };
-  }
-
-  private hashOpaqueToken(rawToken: string): string {
-    // A fast, deterministic hash — unlike bcrypt, this needs to support an exact-match
-    // lookup by a unique column, not a slow brute-force-resistant comparison. The tokens
-    // being hashed are already high-entropy random bytes, so speed isn't a liability here.
-    return createHash('sha256').update(rawToken).digest('hex');
   }
 
   private toPublicUser(user: User): Omit<User, 'passwordHash'> {

@@ -312,4 +312,26 @@ describe('Tasks — isolation is transitive through the project', () => {
       .expect(404);
     await as(ctx.app, owner).delete(`/orgs/acme/tasks/${foreignTask.id}`).expect(404);
   });
+
+  it('assigns unique, gapless numbers under concurrent creation', async () => {
+    const { owner } = await setupOrg('tasks-concurrency-owner@example.test', 'acme');
+    const project = await as(ctx.app, owner)
+      .post('/orgs/acme/projects')
+      .send({ key: 'APOLLO', name: 'Apollo' })
+      .expect(201);
+
+    const CONCURRENCY = 20;
+    const results = await Promise.all(
+      Array.from({ length: CONCURRENCY }, (_, i) =>
+        as(ctx.app, owner)
+          .post(`/orgs/acme/projects/${project.body.id}/tasks`)
+          .send({ title: `Task ${i}` })
+          .expect(201),
+      ),
+    );
+
+    const numbers = results.map((r) => r.body.number as number).sort((a, b) => a - b);
+    expect(new Set(numbers).size).toBe(CONCURRENCY);
+    expect(numbers).toEqual(Array.from({ length: CONCURRENCY }, (_, i) => i + 1));
+  });
 });

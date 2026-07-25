@@ -64,7 +64,20 @@ point of view — no CORS configuration, and the refresh-token cookie never cros
 whenever present:
 
 ```sh
-prisma generate && (if [ "$VERCEL_ENV" = production ]; then prisma migrate deploy; fi) && nest build
+bash scripts/vercel-build.sh
+```
+
+The guard logic lives in `apps/api/scripts/vercel-build.sh` rather than inline in `package.json`
+because Yarn 4 (Corepack-activated on Vercel via the `packageManager` field — see below) runs
+package.json scripts through its own portable shell, which understands single commands and
+`&&`/`||` but not `if`/`then`/`fi` control flow. The script itself:
+
+```sh
+prisma generate
+if [ "$VERCEL_ENV" = "production" ]; then
+  prisma migrate deploy
+fi
+nest build
 ```
 
 Vercel sets `VERCEL_ENV` to `production`, `preview`, or `development` depending on which kind of
@@ -74,6 +87,14 @@ database to isolate that from. The guard means only a deploy that lands on the `
 environment (the default branch, typically `main`) runs `prisma migrate deploy`; every preview
 build still runs `prisma generate` and `nest build` so type-checking and the build itself are still
 verified.
+
+**A related monorepo gotcha:** Vercel's Corepack detection reads the `packageManager` field from
+the `package.json` in the project's configured **Root Directory** (`apps/api`, `apps/web`), not
+from the monorepo root — even though the root `package.json` is the one Yarn itself reads locally.
+Without a matching `packageManager` field in each app's own `package.json`, Vercel's build falls
+back to a system Yarn Classic install that can't resolve the `@repo/*` workspace packages at all.
+Both `apps/api/package.json` and `apps/web/package.json` pin `"packageManager": "yarn@4.14.1"` for
+this reason, kept in sync with the root's.
 
 ## 5. DNS
 

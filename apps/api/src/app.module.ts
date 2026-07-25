@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { AtGuard } from './common/guards/at.guard';
 import { OrgGuard } from './common/guards/org.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
+import { ProjectScopeGuard } from './common/guards/project-scope.guard';
 import { ResolveOrgMiddleware } from './common/middleware/resolve-org.middleware';
 import { ScopeModule } from './common/scope/scope.module';
 import { HealthModule } from './health/health.module';
@@ -43,9 +44,10 @@ import { UsersModule } from './users/users.module';
     ProjectMembersModule,
   ],
   providers: [
-    { provide: APP_GUARD, useClass: AtGuard },
-    { provide: APP_GUARD, useClass: OrgGuard },
-    { provide: APP_GUARD, useClass: PermissionsGuard },
+    { provide: APP_GUARD, useClass: AtGuard }, // authenticate
+    { provide: APP_GUARD, useClass: OrgGuard }, // token ↔ tenant
+    { provide: APP_GUARD, useClass: PermissionsGuard }, // in-boundary 403
+    { provide: APP_GUARD, useClass: ProjectScopeGuard }, // cross-boundary 404
   ],
 })
 export class AppModule implements NestModule {

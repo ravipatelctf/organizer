@@ -13,6 +13,7 @@ import { InvitationsModule } from './invitations/invitations.module';
 import { MembersModule } from './members/members.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RolesModule } from './roles/roles.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -32,6 +33,7 @@ import { UsersModule } from './users/users.module';
     OrganizationsModule,
     MembersModule,
     InvitationsModule,
+    RolesModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: AtGuard },

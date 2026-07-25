@@ -19,6 +19,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ProjectMembersModule } from './project-members/project-members.module';
 import { ProjectsModule } from './projects/projects.module';
 import { RolesModule } from './roles/roles.module';
+import { TasksModule } from './tasks/tasks.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -42,6 +43,7 @@ import { UsersModule } from './users/users.module';
     RolesModule,
     ProjectsModule,
     ProjectMembersModule,
+    TasksModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: AtGuard }, // authenticate

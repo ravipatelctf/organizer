@@ -1,7 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 
 import { AccessContext } from './access-context';
-import { projectWhere } from './project-scope.util';
+import { projectWhere, taskWhere } from './project-scope.util';
 
 function makeCtx(overrides: Partial<AccessContext> = {}): AccessContext {
   return {
@@ -80,5 +80,37 @@ describe('projectWhere', () => {
     expect(() => projectWhere(makeCtx({ isSuperAdmin: true, orgId: null }))).toThrow(
       ForbiddenException,
     );
+  });
+});
+
+describe('taskWhere', () => {
+  // taskWhere carries no tenant filter of its own — isolation is entirely transitive
+  // through projectWhere(ctx), so these mirror projectWhere's own cases one level down.
+  it('nests the org-wide project filter for an org admin', () => {
+    const result = taskWhere(makeCtx({ isOrgAdmin: true }));
+
+    expect(result).toEqual({
+      deletedAt: null,
+      project: { organizationId: 'org-1', deletedAt: null },
+    });
+  });
+
+  it('nests the membership-scoped project filter for view-own-projects', () => {
+    const result = taskWhere(
+      makeCtx({ scopes: ['view-own-projects'], membershipId: 'membership-1' }),
+    );
+
+    expect(result).toEqual({
+      deletedAt: null,
+      project: {
+        organizationId: 'org-1',
+        deletedAt: null,
+        members: { some: { orgMembershipId: 'membership-1', deletedAt: null } },
+      },
+    });
+  });
+
+  it('propagates projectWhere throwing when the actor has no project visibility', () => {
+    expect(() => taskWhere(makeCtx({ scopes: [] }))).toThrow(ForbiddenException);
   });
 });

@@ -27,6 +27,7 @@ export function projectWhere(ctx: AccessContext): Prisma.ProjectWhereInput {
   };
 }
 
-// taskWhere(ctx) arrives in Phase 7 with the Task model — Prisma.TaskWhereInput doesn't
-// exist until then. It will be { deletedAt: null, project: projectWhere(ctx) }: isolation
-// is transitive through the project, and tasks get no tenant filter of their own.
+// Tasks get no tenant filter of their own — isolation is transitive through the project.
+export function taskWhere(ctx: AccessContext): Prisma.TaskWhereInput {
+  return { deletedAt: null, project: projectWhere(ctx) };
+}

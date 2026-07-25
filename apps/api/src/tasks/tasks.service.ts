@@ -36,26 +36,39 @@ export class TasksService {
       await this.assertAssigneeInProject(projectId, dto.assigneeId);
     }
 
-    // A read-then-write count is not concurrency-safe — two simultaneous creates against
-    // the same project can read the same count and collide on @@unique([projectId, number]).
-    // Phase 7's numbering commit replaces this with an atomic, transactional increment.
-    const existing = await this.prisma.task.count({ where: { projectId } });
+    const taskId = randomUUID();
+    const orgId = ctx.orgId;
 
-    return this.prisma.task.create({
-      data: {
-        id: randomUUID(),
-        organizationId: ctx.orgId,
-        projectId,
-        number: existing + 1,
-        title: dto.title,
-        description: dto.description,
-        priority: dto.priority ?? 'MEDIUM',
-        assigneeId: dto.assigneeId,
-        dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
-        createdById: ctx.userId,
-        updatedById: ctx.userId,
+    // Incrementing task_sequence and reading it back happen inside the same transaction
+    // as the insert, so concurrent creates against the same project serialize on that row
+    // and get unique, gapless numbers rather than racing on a read-then-write. A burst of
+    // concurrent creates against one project queues on this row lock, so the defaults
+    // (2s wait, 5s timeout) are too tight against a pooled Neon connection — widen both.
+    return this.prisma.$transaction(
+      async (tx) => {
+        const project = await tx.project.update({
+          where: { id: projectId },
+          data: { taskSequence: { increment: 1 } },
+        });
+
+        return tx.task.create({
+          data: {
+            id: taskId,
+            organizationId: orgId,
+            projectId,
+            number: project.taskSequence,
+            title: dto.title,
+            description: dto.description,
+            priority: dto.priority ?? 'MEDIUM',
+            assigneeId: dto.assigneeId,
+            dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
+            createdById: ctx.userId,
+            updatedById: ctx.userId,
+          },
+        });
       },
-    });
+      { maxWait: 15000, timeout: 15000 },
+    );
   }
 
   async update(ctx: AccessContext, taskId: string, dto: UpdateTaskDto): Promise<Task> {

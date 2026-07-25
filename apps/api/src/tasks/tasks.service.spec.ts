@@ -21,8 +21,9 @@ describe('TasksService', () => {
 
   function makePrismaMock() {
     return {
-      task: { findMany: jest.fn(), count: jest.fn(), create: jest.fn(), update: jest.fn() },
+      task: { findMany: jest.fn(), update: jest.fn() },
       projectMember: { findUnique: jest.fn() },
+      $transaction: jest.fn(),
     } as unknown as jest.Mocked<PrismaService>;
   }
 
@@ -35,17 +36,26 @@ describe('TasksService', () => {
   }
 
   describe('create', () => {
-    it('takes organizationId from the context, never from the dto', async () => {
+    it('takes organizationId from the context, never from the dto, and numbers inside the transaction', async () => {
       const prisma = makePrismaMock();
-      (prisma.task.count as jest.Mock).mockResolvedValue(2);
-      (prisma.task.create as jest.Mock).mockResolvedValue({ id: 't1', number: 3 });
+      const tx = {
+        project: { update: jest.fn().mockResolvedValue({ id: 'p1', taskSequence: 3 }) },
+        task: { create: jest.fn().mockResolvedValue({ id: 't1', number: 3 }) },
+      };
+      (prisma.$transaction as jest.Mock).mockImplementation((fn: (tx: unknown) => unknown) =>
+        fn(tx),
+      );
       const projectAccess = makeProjectAccessMock();
       const service = new TasksService(prisma, projectAccess, makeTaskAccessMock());
 
       await service.create(makeCtx({ orgId: 'org-1' }), 'p1', { title: 'Ship it' });
 
       expect(projectAccess.assertVisible).toHaveBeenCalledWith(expect.anything(), 'p1');
-      expect(prisma.task.create).toHaveBeenCalledWith(
+      expect(tx.project.update).toHaveBeenCalledWith({
+        where: { id: 'p1' },
+        data: { taskSequence: { increment: 1 } },
+      });
+      expect(tx.task.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ organizationId: 'org-1', number: 3, projectId: 'p1' }),
         }),

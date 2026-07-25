@@ -113,15 +113,18 @@ this reason, kept in sync with the root's.
 
 ## 5. DNS
 
-One record, at whatever registrar/DNS provider controls `ravipatelctf.com`:
+`shiksha.ravipatelctf.com` is added as a domain on `organizer-web` (Production), currently showing
+**Invalid Configuration** until the DNS record below exists — this is the one step in this runbook
+that isn't done, because `ravipatelctf.com` is registered at GoDaddy and DNS changes there are
+outside what gets done from this session. One record, added at GoDaddy:
 
 ```
-CNAME shiksha → cname.vercel-dns.com
+CNAME shiksha → 4adaf10657854039.vercel-dns-017.com.
 ```
 
-Vercel's dashboard shows this exact value once you add `shiksha.ravipatelctf.com` as a domain on
-the `web` project — add the domain there first, then add the record, then wait for Vercel to
-report it verified.
+(The legacy `cname.vercel-dns.com` target also still works, per Vercel's own domain settings page,
+if the per-domain hostname above ever needs regenerating.) DNS propagation can take a while;
+Vercel's dashboard flips the domain to **Valid Configuration** once it resolves.
 
 ## 6. Post-deploy verification
 

@@ -7,12 +7,12 @@ import {
   Project,
   ProjectMember,
   Role,
+  Task,
   User,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
-// The isolation matrix (Phase 9) is unreadable without these. Extended with makeTask in
-// Phase 7 once that model exists.
+// The isolation matrix (Phase 9) is unreadable without these.
 
 // Every factory-made user shares this password, matching the uniform-password fixture
 // convention from Phase 9 — test/auth.ts's login() defaults to it.
@@ -126,6 +126,35 @@ export async function makeProjectMember(
       projectId: project.id,
       orgMembershipId: membership.id,
       role: overrides.role ?? 'CONTRIBUTOR',
+    },
+  });
+}
+
+// organizationId is derived from the project, never passed in — same reasoning as
+// makeProjectMember. `number` defaults to a value unlikely to collide with a fixture's own
+// sequence-driven numbering, since this factory writes directly and doesn't touch
+// project.task_sequence.
+export async function makeTask(
+  prisma: PrismaClient,
+  project: Project,
+  overrides: Partial<{
+    number: number;
+    title: string;
+    status: string;
+    priority: string;
+    assigneeId: string;
+  }> = {},
+): Promise<Task> {
+  const suffix = randomUUID().slice(0, 8);
+  return prisma.task.create({
+    data: {
+      organizationId: project.organizationId,
+      projectId: project.id,
+      number: overrides.number ?? Math.floor(Math.random() * 100000) + 1000,
+      title: overrides.title ?? `Task ${suffix}`,
+      status: overrides.status ?? 'TODO',
+      priority: overrides.priority ?? 'MEDIUM',
+      assigneeId: overrides.assigneeId,
     },
   });
 }

@@ -7,6 +7,7 @@ import { Pool } from 'pg';
 import { AuthModule } from './auth/auth.module';
 import { AtGuard } from './common/guards/at.guard';
 import { HealthModule } from './health/health.module';
+import { OrganizationsModule } from './organizations/organizations.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
 
@@ -24,6 +25,7 @@ import { UsersModule } from './users/users.module';
     HealthModule,
     UsersModule,
     AuthModule,
+    OrganizationsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: AtGuard }],
 })

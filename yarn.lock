@@ -3557,7 +3557,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@repo/permissions@workspace:packages/permissions":
+"@repo/permissions@workspace:*, @repo/permissions@workspace:packages/permissions":
   version: 0.0.0-use.local
   resolution: "@repo/permissions@workspace:packages/permissions"
   dependencies:
@@ -5216,6 +5216,7 @@ __metadata:
     "@prisma/adapter-pg": "npm:^7.9.0"
     "@prisma/client": "npm:^7.9.0"
     "@repo/eslint-config": "workspace:*"
+    "@repo/permissions": "workspace:*"
     "@repo/typescript-config": "workspace:*"
     "@types/bcrypt": "npm:^6.0.0"
     "@types/cookie-parser": "npm:^1.4.10"

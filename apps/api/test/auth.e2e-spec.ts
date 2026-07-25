@@ -41,7 +41,18 @@ describe('Authentication', () => {
       .set('Cookie', [`refresh_token=${actor.refreshToken}`])
       .expect(200);
     expect(refreshed.body.accessToken).toEqual(expect.any(String));
-    expect(refreshed.body.accessToken).not.toBe(actor.accessToken);
+
+    // Rotation issues a brand new opaque refresh token — this is the guarantee that
+    // matters, not whether the access token JWT happens to differ byte-for-byte (its
+    // payload can legitimately collide with the previous one if both are signed within
+    // the same second).
+    const newRefreshCookie = refreshed.headers['set-cookie'] as unknown as string[];
+    const newRefreshToken = newRefreshCookie
+      .find((cookie) => cookie.startsWith('refresh_token='))
+      ?.split(';')[0]
+      ?.split('=')[1];
+    expect(newRefreshToken).toEqual(expect.any(String));
+    expect(newRefreshToken).not.toBe(actor.refreshToken);
 
     // The old refresh token was deleted by rotation — presenting it again is a 403.
     await request(ctx.app.getHttpServer())

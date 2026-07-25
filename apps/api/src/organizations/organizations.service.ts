@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
 import { Organization } from '@prisma/client';
 import { DEFAULT_ROLES } from '@repo/permissions';
 
@@ -103,5 +103,17 @@ export class OrganizationsService {
         ...(dto.settings !== undefined ? { settings: dto.settings } : {}),
       },
     });
+  }
+
+  // Verifies the actor holds an ACTIVE membership in the target organization before the
+  // controller re-mints a token for it.
+  async assertActiveMembership(userId: string, organizationId: string): Promise<void> {
+    const membership = await this.prisma.orgMembership.findUnique({
+      where: { organizationId_userId: { organizationId, userId } },
+    });
+
+    if (!membership || membership.status !== 'ACTIVE' || membership.deletedAt) {
+      throw new ForbiddenException('Not a member of this organization.');
+    }
   }
 }

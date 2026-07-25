@@ -102,6 +102,12 @@ export class AuthService {
     return this.issueTokens(user, session.organizationId ?? undefined);
   }
 
+  // Re-mints a token pair scoped to a different organization. The caller is responsible for
+  // verifying the actor holds a membership there first — this method trusts its input.
+  async reissueTokensForOrganization(user: User, organizationId: string): Promise<AuthTokens> {
+    return this.issueTokens(user, organizationId);
+  }
+
   async logout(rawToken: string | undefined): Promise<void> {
     if (!rawToken) return;
     await this.prisma.session.deleteMany({ where: { token: rawToken } });

@@ -1,3 +1,5 @@
+import { ForbiddenException } from '@nestjs/common';
+
 import { PrismaService } from '../prisma/prisma.service';
 import { OrganizationsService } from './organizations.service';
 
@@ -42,6 +44,42 @@ describe('OrganizationsService', () => {
         expect.objectContaining({ where: { userId: 'user-1', status: 'ACTIVE', deletedAt: null } }),
       );
       expect(result).toEqual([{ id: 'org-1', deletedAt: null }]);
+    });
+  });
+
+  describe('assertActiveMembership', () => {
+    it('throws when there is no membership', async () => {
+      const prisma = makePrismaMock();
+      (prisma.orgMembership.findUnique as jest.Mock).mockResolvedValue(null);
+      const service = new OrganizationsService(prisma);
+
+      await expect(service.assertActiveMembership('user-1', 'org-1')).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('throws when the membership is suspended', async () => {
+      const prisma = makePrismaMock();
+      (prisma.orgMembership.findUnique as jest.Mock).mockResolvedValue({
+        status: 'SUSPENDED',
+        deletedAt: null,
+      });
+      const service = new OrganizationsService(prisma);
+
+      await expect(service.assertActiveMembership('user-1', 'org-1')).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('resolves when the membership is active', async () => {
+      const prisma = makePrismaMock();
+      (prisma.orgMembership.findUnique as jest.Mock).mockResolvedValue({
+        status: 'ACTIVE',
+        deletedAt: null,
+      });
+      const service = new OrganizationsService(prisma);
+
+      await expect(service.assertActiveMembership('user-1', 'org-1')).resolves.toBeUndefined();
     });
   });
 });

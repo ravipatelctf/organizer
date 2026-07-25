@@ -12,5 +12,6 @@ import { RtStrategy } from './strategies/rt.strategy';
   imports: [UsersModule, PassportModule, JwtModule.register({})],
   controllers: [AuthController],
   providers: [AuthService, AtStrategy, RtStrategy],
+  exports: [AuthService],
 })
 export class AuthModule {}

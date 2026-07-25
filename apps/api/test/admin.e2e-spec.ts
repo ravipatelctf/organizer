@@ -69,4 +69,29 @@ describe('Admin and audit — superadmin surface (isolation boundary #1)', () =>
     await as(ctx.app, actor).get('/admin/projects').expect(403);
     await as(ctx.app, actor).get('/admin/users').expect(403);
   });
+
+  it('every admin request writes an audit row, including reads and 404s', async () => {
+    const acme = await makeOrg(ctx.prisma, { slug: 'acme' });
+
+    await makeUser(ctx.prisma, { email: 'super-audit@example.test', isSuperAdmin: true });
+    const superadmin = await login(ctx.app, 'super-audit@example.test');
+
+    await as(ctx.app, superadmin).get('/admin/stats').expect(200);
+    await as(ctx.app, superadmin).get('/admin/organizations').expect(200);
+    await as(ctx.app, superadmin).get(`/admin/organizations/${acme.id}`).expect(200);
+    await as(ctx.app, superadmin)
+      .get('/admin/organizations/00000000-0000-0000-0000-000000000000')
+      .expect(404);
+
+    const rows = await ctx.prisma.auditLog.findMany({ orderBy: { createdAt: 'asc' } });
+    expect(rows).toHaveLength(4);
+    expect(rows.every((row) => row.organizationId === null)).toBe(true);
+    expect(rows.every((row) => row.actorUserId !== null)).toBe(true);
+    expect(rows.map((row) => row.action)).toEqual([
+      'admin.stats.get',
+      'admin.organizations.list',
+      'admin.organizations.get',
+      'admin.organizations.get',
+    ]);
+  });
 });
